@@ -1,0 +1,17 @@
+---
+
+- name: ansible.utils
+- name: ansible.controller
+  version: "<4.6"
+- name: ansible.netcommon
+- name: ansible.posix
+- name: azure.azcollection
+- name: community.general
+- name: community.vmware
+- name: community.aws
+- name: containers.podman
+- name: redhat.rhel_idm
+- name: redhat.rhel_system_roles
+- name: redhat.satellite
+- name: redhat.satellite_operations
+...
