@@ -1,7 +1,9 @@
 #!/bin/bash
 version=$(<version.txt)
 ansiblever="2.4"
+imagename="rhis-provisioner-9-$ansiblever"
 nocache="false"
+multiarch="false"
 buildargs=""
 
 while [[ "$#" -gt 0 ]]; do
@@ -14,6 +16,10 @@ while [[ "$#" -gt 0 ]]; do
             nocache="true"
             #shift # Shift past the value
             ;;
+        -m|--multi-arch)
+            multiarch="true"
+            #shift # Shift past the value
+            ;;
         *)
             echo "Unknown option: $1"
             exit 1
@@ -22,7 +28,15 @@ while [[ "$#" -gt 0 ]]; do
     shift # Shift past the option
 done
 
-sudo dnf -y install ansible-core podman 
+# Check if Ansible is already present, may want to utilize currently initialized Ansible environment, ie venv
+if command -v ansible &> /dev/null; then
+    echo "Ansible already present and available."
+else
+    echo "Ansible is either not found or not in PATH, installing..."
+    sudo dnf -y install ansible-core
+fi
+
+sudo dnf -y install podman
 podman login registry.redhat.io
 
 cp ansible.cfg sources/ansible.cfg
@@ -42,6 +56,7 @@ echo "Running 'podman build' with the following parameters:"
 echo
 echo "ansible-ver: $ansiblever"
 echo "no-cache: $nocache"
+echo "multi-arch: $multiarch"
 echo
 
 if [[ $ansiblever == "2.5" ]]; then
@@ -54,5 +69,10 @@ if [[ $nocache == "true" ]]; then
   buildargs+=" --no-cache"
 fi
 
-podman build $buildargs -t rhis-provisioner-9-$ansiblever:$version .
-podman tag localhost/rhis-provisioner-9-$ansiblever:$version rhis-provisioner-9-$ansiblever:latest
+if [[ $multiarch == "true" ]]; then
+  podman manifest create $imagename
+  buildargs+=" --platform linux/amd64,linux/arm64 --manifest localhost/$imagename"
+fi
+
+podman build $buildargs -t $imagename:$version .
+podman tag localhost/$imagename:$version $imagename:latest
