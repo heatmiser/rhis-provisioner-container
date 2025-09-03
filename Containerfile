@@ -16,27 +16,17 @@ RUN python3 -m pip install ipalib
 # ansible collection requirements
 RUN mkdir -p /etc/ansible
 COPY sources/ansible.cfg /etc/ansible/ansible.cfg
-RUN ansible-galaxy collection install ansible.utils
+COPY requirements-24.yml /tmp/requirements-24.yml
+COPY requirements-25.yml /tmp/requirements-25.yml
 
 RUN if [[ $ANSIBLE_VER == "2.5" ]]; then \
-    echo "Installing ansible.controller collection for AAP 2.5"; \
-    ansible-galaxy collection install ansible.controller:">=4.6"; \
+    echo "Installing collections to support AAP 2.5"; \
+    ansible-galaxy install -r /tmp/requirements-25.yml; \
     else \
-    echo "Installing ansible.controller collection for AAP 2.4"; \
-    ansible-galaxy collection install ansible.controller:"<4.6"; \
+    echo "Installing collections to support AAP 2.4"; \
+    ansible-galaxy install -r /tmp/requirements-24.yml; \
     fi
 
-RUN ansible-galaxy collection install ansible.netcommon
-RUN ansible-galaxy collection install ansible.posix
-RUN ansible-galaxy collection install azure.azcollection
-RUN ansible-galaxy collection install community.general
-RUN ansible-galaxy collection install community.vmware
-RUN ansible-galaxy collection install community.aws
-RUN ansible-galaxy collection install containers.podman
-RUN ansible-galaxy collection install redhat.rhel_idm
-RUN ansible-galaxy collection install redhat.rhel_system_roles
-RUN ansible-galaxy collection install redhat.satellite
-RUN ansible-galaxy collection install redhat.satellite_operations
 # add the rhis builder repos
 RUN mkdir -p /rhis
 WORKDIR /rhis
