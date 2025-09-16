@@ -22,7 +22,7 @@ while [[ "$#" -gt 0 ]]; do
     shift # Shift past the option
 done
 
-sudo dnf -y install ansible-core podman 
+sudo dnf -y install podman 
 podman login registry.redhat.io
 
 cp ansible.cfg sources/ansible.cfg
