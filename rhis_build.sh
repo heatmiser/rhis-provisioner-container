@@ -45,9 +45,9 @@ echo "no-cache: $nocache"
 echo
 
 if [[ $ansiblever == "2.5" ]]; then
-  buildargs="--build-arg ANSIBLE_VER=2.5"
+  buildargs="--file Containerfile-aap25 --build-arg ANSIBLE_VER=2.5"
 else
-  buildargs="--build-arg ANSIBLE_VER=2.4"
+  buildargs="--file Containerfile-aap24 --build-arg ANSIBLE_VER=2.4"
 fi
 
 if [[ $nocache == "true" ]]; then
