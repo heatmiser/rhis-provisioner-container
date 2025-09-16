@@ -1,0 +1,80 @@
+FROM registry.redhat.io/ansible-automation-platform-25/ee-supported-rhel9@sha256:fe33ad479b67aacbd4c78b7f5d6e64b5a4ac00354d2157ef367919ee673b03f5
+LABEL maintainer="Paul Armstrong <github:@parmstro>"
+LABEL contributors="Paul Armstrong <github:@parmstro>, Cory McKee <github:@cojmckee>, Mike Savage <github:@heatmiser>, Charles Shaw <github: @shawkingly>" 
+LABEL description="The rhis-provisioner container is built from ansible-automation-platform ee-supported-rhel9 images and the rhis-builder set of repositories. It is designed to ease the implementaion of the Red Hat Infrastructure Standard."
+LABEL name="rhis-provisioner"
+LABEL summary="Provides the latest build of rhis-builder runtime and repositories."
+LABEL version="1.0"
+ENTRYPOINT ["/bin/bash", "-c", "echo '##########################################\nWelcome to the RHIS Provisioner automation environment!' && exec /bin/bash"]
+# rpm requirements
+ARG ANSIBLE_VER
+RUN dnf -y install git vim python3-ipalib python3-jmespath python3-pip bind-utils iputils tmux
+# python requirements
+RUN python3 -m pip install fqdn
+RUN python3 -m pip install ipalib
+# ansible collection requirements
+RUN mkdir -p /etc/ansible
+COPY sources/ansible.cfg /etc/ansible/ansible.cfg
+ 
+RUN ansible-galaxy collection install azure.azcollection
+RUN ansible-galaxy collection install community.general
+RUN ansible-galaxy collection install community.vmware
+RUN ansible-galaxy collection install community.aws
+RUN ansible-galaxy collection install containers.podman
+
+# add the rhis builder repos
+RUN mkdir -p /rhis
+WORKDIR /rhis
+RUN git clone https://github.com/parmstro/rhis-builder-idm.git
+RUN git clone https://github.com/parmstro/rhis-builder-satellite.git
+RUN git clone https://github.com/parmstro/rhis-builder-pipelines.git
+RUN git clone https://github.com/parmstro/rhis-builder-aap.git
+RUN git clone https://github.com/parmstro/rhis-builder-nbde.git
+RUN git clone https://github.com/parmstro/rhis-builder-day-2-ops.git
+RUN git clone https://github.com/parmstro/rhis-builder-ansible-ee.git
+RUN git clone https://github.com/parmstro/rhis-builder-imagebuilder.git
+RUN git clone https://github.com/parmstro/rhis-builder-yubi.git
+RUN git clone https://github.com/parmstro/rhis-builder-convert2rhel.git
+RUN git clone https://github.com/parmstro/rhis-builder-inventory.git
+
+# Now make the folders for group_vars, host_vars and inventory files
+RUN mkdir -p /rhis/vars/external_inventory
+RUN mkdir -p /rhis/vars/external_tasks
+RUN mkdir -p /rhis/vars/files
+RUN mkdir -p /rhis/vars/group_vars
+RUN mkdir -p /rhis/vars/host_vars
+RUN mkdir -p /rhis/vars/vars
+RUN mkdir -p /rhis/vars/vault
+
+# This cleans up the repo vars folders and links each project to our volume directories
+# we probably need to manage this for templates and files that we want to modify as well
+COPY add_softlinks.yml /rhis/add_softlinks.yml
+RUN chmod +x /rhis/add_softlinks.yml
+RUN ansible-playbook add_softlinks.yml
+
+# copy the reference information
+COPY podman_commands.txt /rhis/podman_commands.txt
+COPY rhis-builder_sample_commands.txt /rhis/rhis-builder_sample_commands.txt
+COPY README.md /rhis/README.md
+
+# copy the sample build scripts
+COPY build_idm_primary.sh /rhis/build_idm_primary.sh
+RUN chmod +x /rhis/build_idm_primary.sh
+
+COPY build_sat_primary_connected.sh /rhis/build_sat_primary_connected.sh
+RUN chmod +x /rhis/build_sat_primary_connected.sh
+
+COPY build_test_hosts.sh /rhis/build_test_hosts.sh
+RUN chmod +x /rhis/build_test_hosts.sh
+
+COPY destroy_test_hosts.sh /rhis/destroy_test_hosts.sh
+RUN chmod +x /rhis/destroy_test_hosts.sh
+
+COPY build_aap_controller24.sh /rhis/build_aap_controller24.sh
+RUN chmod +x /rhis/build_aap_controller24.sh
+
+COPY build_aap_controller24.sh /rhis/build_aap_hub24.sh
+RUN chmod +x /rhis/build_aap_hub24.sh
+
+# Cleanup the ansible configuration
+COPY ansible.cfg.clean /etc/ansible/ansible.cfg
